@@ -12,16 +12,61 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from passlib.hash import bcrypt
 import jwt
-from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType, ImageContent
+# from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType, ImageContent
 import json
 import base64
 from openai import AsyncOpenAI
+from dotenv import load_dotenv
+import os
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv() 
+
+# Temporary replacement for Emergent LLM until SDK is installed
+class LlmChat:
+    def __init__(self, api_key=None, session_id=None, system_message=None):
+        self.api_key = api_key
+        self.session_id = session_id
+        self.system_message = system_message
+        self.model_name = "mock-model"
+
+    def with_model(self, provider, model_name):
+        self.model_name = model_name
+        return self
+
+    async def send_message(self, user_message):
+        # user_message can be text or object; handle both
+        if hasattr(user_message, "text"):
+            text = user_message.text
+        else:
+            text = str(user_message)
+
+        # Simple mock response logic
+        return f"[AI simulated reply to '{text}']"
+
+# Mock UserMessage for compatibility
+class UserMessage:
+    def __init__(self, text, file_contents=None):
+        self.text = text
+        self.file_contents = file_contents or []
+
+# Mock classes (used for image upload endpoints)
+class ImageContent:
+    def __init__(self, image_base64):
+        self.image_base64 = image_base64
+
+class FileContentWithMimeType:
+    def __init__(self, content, mime_type):
+        self.content = content
+        self.mime_type = mime_type
+
+
+
+BASE_DIR = Path(__file__).resolve().parent
+UPLOADS_DIR = BASE_DIR / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL')
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'medimate_db')]
 
@@ -39,8 +84,14 @@ api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
 
 # Uploads directory
-UPLOADS_DIR = Path("/app/backend/uploads")
-UPLOADS_DIR.mkdir(exist_ok=True)
+from pathlib import Path
+
+# Get current file directory
+BASE_DIR = Path(__file__).resolve().parent
+UPLOADS_DIR = BASE_DIR / "uploads"
+
+# Create the uploads directory if it doesn't exist
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Models
 class User(BaseModel):
